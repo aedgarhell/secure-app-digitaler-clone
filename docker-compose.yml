@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+    ports:
+      - "3000:3000"
+    networks:
+      - app
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: secure_app
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - app
+  redis:
+    image: redis:7
+    networks:
+      - app
+  proxy:
+    image: traefik:v2.10
+    command:
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - app
+  mail:
+    image: mailhog/mailhog:latest
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - app
+
+volumes:
+  db-data:
+
+networks:
+  app:
+    driver: bridge
