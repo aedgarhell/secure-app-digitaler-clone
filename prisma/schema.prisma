@@ -30,4 +30,42 @@ model Tenant {
   id    Int    @id @default(autoincrement())
   name  String
   users User[]
+  vaults Vault[]
+  /// Collection of runbooks/documentation associated with this tenant
+  runbooks Runbook[]
+}
+
+/// Vault represents a logical container for secrets for a tenant. Each vault belongs to a tenant.
+model Vault {
+  id        Int      @id @default(autoincrement())
+  name      String
+  tenantId  Int
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  secrets   Secret[]
+}
+
+/// Secret stores an encrypted blob of sensitive information. The actual fields are encrypted using the EncryptionService.
+model Secret {
+  id       Int      @id @default(autoincrement())
+  vaultId  Int
+  type     String
+  /// JSON payload with any metadata fields. These are stored encrypted.
+  fields   Json?
+  /// Tags for organizing secrets.
+  tags     String[]
+  version  Int      @default(1)
+  /// The encrypted blob storing the secret data (iv, content, tag).
+  encBlob  String
+  vault    Vault    @relation(fields: [vaultId], references: [id])
+}
+
+/// Runbook represents a piece of documentation (e.g. runbook/instructions) that belongs to a tenant. The content is stored as Markdown.
+model Runbook {
+  id         Int      @id @default(autoincrement())
+  tenantId   Int
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  title      String?
+  markdown   String
+  attachments Json?
+  createdAt  DateTime @default(now())
 }
