@@ -5,9 +5,11 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { SecretsModule } from './secrets/secrets.module';
 import { VaultsModule } from './vaults/vaults.module';
+import { OnboardingModule } from './onboarding/onboarding.module';
+import { RunbooksModule } from './runbooks/runbooks.module';
 
 @Module({
-  imports: [UsersModule, AuthModule, SecretsModule, VaultsModule],
+  imports: [UsersModule, AuthModule, SecretsModule, VaultsModule, OnboardingModule, RunbooksModule],
   controllers: [AppController],
   providers: [AppService],
 })
