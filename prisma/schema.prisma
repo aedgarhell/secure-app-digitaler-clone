@@ -7,11 +7,27 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// The primary user model.
 model User {
-  id         String   @id @default(uuid())
-  email      String   @unique
-  password   String
-  totpSecret String?  @map("totp_secret")
-  totpEnabled Boolean @default(false) @map("totp_enabled")
-  createdAt DateTime @default(now())
+  id          Int       @id @default(autoincrement())
+  email       String    @unique
+  password    String
+  createdAt   DateTime  @default(now())
+  /// Base32 encoded secret for TOTP (if enabled)
+  totpSecret  String?   @map("totp_secret")
+  /// Indicates whether TOTP is enabled for this user
+  totpEnabled Boolean   @default(false) @map("totp_enabled")
+  /// Foreign key to the tenant this user belongs to
+  tenantId    Int?
+  /// Tenant relationship
+  tenant      Tenant?   @relation(fields: [tenantId], references: [id])
+  /// Role within the tenant
+  role        String    @default("customer")
+}
+
+/// Tenant represents an isolated customer or organization.
+model Tenant {
+  id    Int    @id @default(autoincrement())
+  name  String
+  users User[]
 }
