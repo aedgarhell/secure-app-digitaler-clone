@@ -33,6 +33,74 @@ model Tenant {
   vaults Vault[]
   /// Collection of runbooks/documentation associated with this tenant
   runbooks Runbook[]
+
+  /// Configuration for the heartbeat/release mechanism. One policy per tenant.
+  releasePolicies ReleasePolicy[]
+
+  /// Recorded heartbeat pings for this tenant
+  heartbeats     Heartbeat[]
+
+  /// Recorded releases triggered for this tenant
+  releases       Release[]
+
+  /// Succession information for this tenant
+  successions    Succession[]
+
+  /// Optional branding/theme configuration for white‑label deployments
+  branding       Json?
+}
+
+/// ReleasePolicy defines the heartbeat interval, grace period and trustees/quorum used to trigger a release when the owner is unavailable.
+model ReleasePolicy {
+  id               Int      @id @default(autoincrement())
+  tenantId         Int
+  tenant           Tenant   @relation(fields: [tenantId], references: [id])
+  /// Heartbeat interval in hours (e.g. 24 = daily ping)
+  heartbeatInterval Int
+  /// Grace period in hours before a release is prepared
+  gracePeriod      Int
+  /// Minimum number of trustees required to approve a release
+  quorum           Int
+  /// List of trustee contacts/emails stored as JSON
+  trustees         Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+/// Heartbeat records the latest ping for a tenant. Used to determine whether a release should be initiated.
+model Heartbeat {
+  id        Int      @id @default(autoincrement())
+  tenantId  Int
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  lastPing  DateTime @default(now())
+  /// Status can be "OK", "WARNING", "MISSED" etc.
+  status    String   @default("OK")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Release represents a triggered data release for a tenant. The release moves through states such as "PENDING", "IN_PROGRESS", "COMPLETED".
+model Release {
+  id          Int      @id @default(autoincrement())
+  tenantId    Int
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  status      String
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+}
+
+/// Succession holds the optional successor contact and readiness questionnaire results for a tenant.
+model Succession {
+  id             Int      @id @default(autoincrement())
+  tenantId       Int
+  tenant         Tenant   @relation(fields: [tenantId], references: [id])
+  successorEmail String?
+  /// JSON encoded questionnaire answers
+  questionnaire  Json?
+  /// Computed readiness score (0-100)
+  readinessScore Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 /// Vault represents a logical container for secrets for a tenant. Each vault belongs to a tenant.
