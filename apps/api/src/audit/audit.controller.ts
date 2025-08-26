@@ -37,4 +37,22 @@ export class AuditController {
     const valid = this.auditService.verifySignature(actorId, action, target, timestamp, signature);
     return { valid };
   }
+
+  /**
+   * Returns all audit entries for a specific actor.
+   * Example: GET /audit/actor/42 returns all actions performed by user 42.
+   */
+  @Get('actor/:actorId')
+  findByActor(@Param('actorId') actorId: string) {
+    return this.auditService.findByActor(+actorId);
+  }
+
+  /**
+   * Returns all audit entries matching a specific action.
+   * Example: GET /audit/action/login returns all login actions.
+   */
+  @Get('action/:action')
+  findByAction(@Param('action') action: string) {
+    return this.auditService.findByAction(action);
+  }
 }

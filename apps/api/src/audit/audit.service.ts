@@ -80,4 +80,23 @@ export class AuditService {
     const expected = this.createSignature(actorId, action, target, ts);
     return expected === signature;
   }
+
+  /**
+   * Retrieve all audit log entries performed by a specific actor.
+   *
+   * @param actorId ID of the user who performed the actions
+   */
+  async findByActor(actorId: number) {
+    // actor is stored as a string in the audit log; convert the id to string for comparison
+    return this.prisma.auditLog.findMany({ where: { actor: actorId.toString() } });
+  }
+
+  /**
+   * Retrieve all audit log entries matching a specific action.
+   *
+   * @param action Action name to filter by
+   */
+  async findByAction(action: string) {
+    return this.prisma.auditLog.findMany({ where: { action } });
+  }
 }
