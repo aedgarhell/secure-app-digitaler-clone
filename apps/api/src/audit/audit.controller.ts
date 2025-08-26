@@ -1,9 +1,15 @@
-import { Controller, Get, Post, Param, Body } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, UseGuards } from '@nestjs/common';
 import { AuditService } from './audit.service';
+// Role-based access control imports
+import { Roles } from '../common/decorators/roles.decorator';
+import { RolesGuard } from '../common/guards/roles.guard';
 
 /**
  * Controller exposing audit log retrieval and signature verification endpoints.
  */
+// Protect all audit endpoints so that only administrators can access them.
+@UseGuards(RolesGuard)
+@Roles('ADMIN')
 @Controller('audit')
 export class AuditController {
   constructor(private readonly auditService: AuditService) {}
