@@ -67,6 +67,39 @@ Secrets sind vertrauliche Informationen (z. B. Passwörter oder Schlüssel), d
 | `PATCH /secrets/:id`    | Aktualisiert ein Secret; bei neuem Wert wird dieser neu verschlüsselt. |
 | `DELETE /secrets/:id`   | Löscht ein Secret.                                                |
 
+## Releases
+
+Das Release‑Modul ermöglicht es, Notfall‑Freigaben auszulösen, abzuschließen und den Zugriff auf alle Secrets und Runbooks eines Tenants zu verteilen.
+
+| Methode & Pfad                 | Beschreibung                                                                 |
+|-------------------------------|------------------------------------------------------------------------------|
+| `GET /release/status`         | Gibt den aktuellen Release‑Status des Tenants zurück.                        |
+| `POST /release/complete/:id`  | Markiert einen Release mit `:id` als abgeschlossen.                         |
+| `POST /release/distribute/:id`| Verteilt Secrets und Runbooks des Tenants für den angegebenen Release und gibt diese zurück. |
+
+## Succession (Nachfolge)
+
+Dieses Modul verwaltet Daten zum Nachfolger eines Tenants und steuert die Einladung und Annahme des Nachfolge‑Prozesses.
+
+| Methode & Pfad                     | Beschreibung                                                                                                     |
+|-----------------------------------|------------------------------------------------------------------------------------------------------------------|
+| `POST /succession`                | Legt Nachfolge‑Informationen (E‑Mail, Fragebogen, Readiness‑Score) für einen Tenant an oder aktualisiert diese.   |
+| `GET /succession`                 | Gibt die gespeicherten Nachfolge‑Informationen eines Tenants zurück.                                             |
+| `POST /succession/invite`         | Sendet eine Einladung an die Nachfolger‑E‑Mail und generiert ein einmaliges Token, das im Fragebogen gespeichert wird. |
+| `POST /succession/accept/:token`  | Akzeptiert die Einladung anhand des Tokens; der Readiness‑Score wird auf 1 gesetzt und der Nachfolger aktiviert.   |
+
+## Audit‑Logs
+
+Das Audit‑Modul zeichnet Aktionen innerhalb der Anwendung auf und ermöglicht deren Abfrage. Alle Endpunkte sind mit einer Rollenprüfung versehen und stehen nur Benutzern mit der Rolle `ADMIN` zur Verfügung.
+
+| Methode & Pfad                 | Beschreibung                                                                                             |
+|-------------------------------|----------------------------------------------------------------------------------------------------------|
+| `GET /audit`                  | Listet alle Audit‑Log‑Einträge auf.                                                                      |
+| `GET /audit/:id`              | Gibt einen Audit‑Log‑Eintrag anhand seiner ID zurück.                                                     |
+| `GET /audit/actor/:actorId`   | Listet alle Log‑Einträge für einen bestimmten Actor (Benutzer‑ID).                                       |
+| `GET /audit/action/:action`   | Listet alle Log‑Einträge für eine bestimmte Aktion.                                                      |
+| `POST /audit/verify`          | Prüft die Signatur eines Audit‑Eintrags. Erwartet den Hash‑Wert im Request‑Body und gibt `true` oder `false` zurück. |
+
 ## Implementierungsdetails
 
 - **Datenbankzugriff**: Die API nutzt Prisma als ORM. Jeder Service erhält eine Instanz des `PrismaService`.
@@ -74,7 +107,11 @@ Secrets sind vertrauliche Informationen (z. B. Passwörter oder Schlüssel), d
 - **TOTP**: Das Auth‑Modul verwendet `speakeasy` zur Erstellung und Überprüfung von TOTP‑Codes.
 
 ## Noch ausstehende Arbeiten
+Die folgende Liste enthält Themen, die für eine produktive Nutzung noch eingeplant sind:
 
-- Die Secrets‑API kann erweitert werden, um Secrets tenant‑basiert oder vault‑basiert zu filtern.
-- Tests und eine ausführliche technische Architektur (Diagramme) sollten ergänzt werden.
-- Eine Frontend‑Anwendung zur Verwaltung der Ressourcen ist noch in Arbeit.
+- **Tests & CI/CD**: Es wurden bereits erste Platzhalter‑Tests angelegt. Für eine hohe Codequalität sollten Unit‑ und Integration‑Tests ergänzt und über die bestehende GitHub‑Actions‑Pipeline (`ci.yml`) automatisch ausgeführt werden.
+- **Rollen- und Berechtigungssystem**: Aktuell ist das Audit‑Modul auf `ADMIN`‑Benutzer beschränkt. Weitere Ressourcen sollten durch ein fein granulares Rollen‑ und Rechte‑Management abgesichert werden (z. B. `OWNER`, `SUCCESSOR`, `USER`).
+- **Passwort‑Management & Refresh‑Tokens**: Funktionen wie Passwort‑Reset, Refresh‑Token‑Mechanismen und Rate‑Limiting erhöhen die Sicherheit des Auth‑Moduls.
+- **UI‑Ausbau**: Die vorhandene Next.js‑Oberfläche soll erweitert werden, um Tenants, Benutzer, Releases, Succession‑Einladungen, Secrets und Runbooks komfortabel zu verwalten.
+- **Architektur‑Dokumentation**: Ergänzend zur API‑Dokumentation sollten technische Diagramme (z. B. Komponenten‑ und Sequenzdiagramme) erstellt werden.
+- **Performance & Monitoring**: Indexe, Caching und Telemetrie (z. B. Prometheus, Grafana) verbessern die Performance und ermöglichen Live‑Monitoring des Systems.
