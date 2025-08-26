@@ -3,7 +3,7 @@ import { ReleaseService } from './release.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 /**
- * Controller exposing release status and completion endpoints.
+ * Controller exposing release status, completion and distribution endpoints.
  */
 @Controller('release')
 export class ReleaseController {
@@ -26,5 +26,14 @@ export class ReleaseController {
   @Post('complete/:id')
   async complete(@Param('id') id: string) {
     return this.releaseService.completeRelease(Number(id));
+  }
+
+  /**
+   * Distributes the data for a release. Requires authentication.
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post('distribute/:id')
+  async distribute(@Param('id') id: string) {
+    return this.releaseService.distributeRelease(Number(id));
   }
 }

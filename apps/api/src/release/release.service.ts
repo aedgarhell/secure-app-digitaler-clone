@@ -1,13 +1,19 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { SecretsService } from '../secrets/secrets.service';
+import { RunbooksService } from '../runbooks/runbooks.service';
 
 /**
- * Service for creating, completing and querying release records.
+ * Service for creating, distributing and completing release records.
  * A release represents the start or completion of a data handover process.
  */
 @Injectable()
 export class ReleaseService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private secretsService: SecretsService,
+    private runbooksService: RunbooksService,
+  ) {}
 
   /**
    * Trigger a new release for the given tenant. If a pending release
@@ -48,7 +54,7 @@ export class ReleaseService {
 
   /**
    * Mark a release as completed. This updates the status and stamps
-   * the completion time.  If the release does not exist, an error
+   * the completion time. If the release does not exist, an error
    * will be thrown by Prisma.
    *
    * @param id ID of the release to complete
@@ -61,5 +67,42 @@ export class ReleaseService {
         completedAt: new Date(),
       },
     });
+  }
+
+  /**
+   * Distribute the data for a release. This retrieves all secrets and runbooks
+   * for the release's tenant, marks the release as distributed, and returns
+   * the collected data.
+   *
+   * @param id ID of the release to distribute
+   */
+  async distributeRelease(id: number) {
+    const release = await this.prisma.release.findUnique({
+      where: { id },
+    });
+
+    if (!release) {
+      throw new NotFoundException(`Release with id ${id} not found`);
+    }
+
+    const tenantId = release.tenantId;
+    const secrets = await this.secretsService.findAllByTenant(tenantId);
+    const runbooks = await this.runbooksService.findAllByTenant(tenantId);
+
+    // update release record: mark as distributed and set completion timestamp
+    await this.prisma.release.update({
+      where: { id },
+      data: {
+        status: 'distributed',
+        completedAt: new Date(),
+      },
+    });
+
+    return {
+      id: release.id,
+      tenantId,
+      secrets,
+      runbooks,
+    };
   }
 }
