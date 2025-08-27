@@ -1,15 +1,22 @@
 import React from 'react';
+import Layout from '../components/Layout';
 
-const HomePage: React.FC = () => {
+/**
+ * Landing page for the Secure App. Presents a welcome message and
+ * encourages users to navigate through the app using the navigation bar.
+ */
+const IndexPage: React.FC = () => {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center">
-      <h1 className="text-4xl font-bold mb-4">Secure App</h1>
-      <p className="text-lg text-gray-600">Welcome to the Secure App onboarding portal.</p>
-      <p className="mt-4 text-center max-w-xl">
-        This interface will guide administrators through setting up customers, vaults, secrets and runbooks.
-      </p>
-    </div>
+    <Layout>
+      <div className="p-8 text-center">
+        <h1 className="text-3xl font-bold mb-4">Secure App</h1>
+        <p className="text-gray-600">
+          Welcome to your secure digital clone. Use the navigation above to
+          manage tenants, users, vaults, secrets, runbooks, and more.
+        </p>
+      </div>
+    </Layout>
   );
 };
 
-export default HomePage;
+export default IndexPage;

@@ -1,12 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import Layout from '../components/Layout';
 
-/**
- * UI component for viewing audit logs. The page fetches all logs on mount and
- * allows filtering logs by actor ID or action type. It communicates with
- * the API via the paths `/audit`, `/audit/actor/:actorId` and
- * `/audit/action/:action` configured in the NestJS API. Adjust the
- * `NEXT_PUBLIC_API_URL` environment variable to point to your API server.
- */
 interface AuditLog {
   id: number;
   actor: string;
@@ -15,111 +9,98 @@ interface AuditLog {
   ts: string;
 }
 
+/**
+ * Audit page displays a list of audit log entries fetched from the API.
+ * Users can filter logs by actor or action.
+ */
 const AuditPage: React.FC = () => {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [actorFilter, setActorFilter] = useState('');
   const [actionFilter, setActionFilter] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
-  /**
-   * Fetch audit logs from the provided endpoint and update state.
-   * @param url API endpoint to call
-   */
-  const fetchLogs = async (url: string) => {
-    try {
-      const res = await fetch(url);
-      if (!res.ok) {
-        throw new Error(`Failed to fetch: ${res.status}`);
-      }
-      const data = await res.json();
-      setLogs(data);
-    } catch (e: any) {
-      setError(e.message ?? 'Unknown error');
-    }
-  };
-
-  // initial fetch of all logs
   useEffect(() => {
-    fetchLogs(`${process.env.NEXT_PUBLIC_API_URL}/audit`);
+    const fetchLogs = async () => {
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+        const res = await fetch(`${baseUrl}/audit`);
+        if (!res.ok) {
+          throw new Error('Failed to fetch audit logs');
+        }
+        const data: AuditLog[] = await res.json();
+        setLogs(data);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLogs();
   }, []);
 
-  /**
-   * Handle submitting the actor filter form.
-   */
-  const handleActorFilter = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (actorFilter.trim() === '') return;
-    fetchLogs(`${process.env.NEXT_PUBLIC_API_URL}/audit/actor/${actorFilter}`);
-  };
-
-  /**
-   * Handle submitting the action filter form.
-   */
-  const handleActionFilter = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (actionFilter.trim() === '') return;
-    fetchLogs(`${process.env.NEXT_PUBLIC_API_URL}/audit/action/${encodeURIComponent(actionFilter)}`);
-  };
+  const filtered = logs.filter((log) => {
+    const actorMatch = actorFilter ? log.actor.includes(actorFilter) : true;
+    const actionMatch = actionFilter ? log.action.includes(actionFilter) : true;
+    return actorMatch && actionMatch;
+  });
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Audit Logs</h1>
-      <div className="mb-4 space-y-2">
-        <form onSubmit={handleActorFilter} className="flex items-center space-x-2">
-          <input
-            type="number"
-            value={actorFilter}
-            onChange={(e) => setActorFilter(e.target.value)}
-            placeholder="Filter by actor ID"
-            className="border p-2 rounded w-40"
-          />
-          <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">
-            Filter
-          </button>
-        </form>
-        <form onSubmit={handleActionFilter} className="flex items-center space-x-2">
-          <input
-            type="text"
-            value={actionFilter}
-            onChange={(e) => setActionFilter(e.target.value)}
-            placeholder="Filter by action"
-            className="border p-2 rounded w-40"
-          />
-          <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">
-            Filter
-          </button>
-        </form>
-        <button
-          onClick={() => fetchLogs(`${process.env.NEXT_PUBLIC_API_URL}/audit`)}
-          className="bg-gray-500 text-white px-4 py-2 rounded"
-        >
-          Reset
-        </button>
+    <Layout>
+      <div className="p-4">
+        <h1 className="text-2xl font-semibold mb-4">Audit Logs</h1>
+        {error ? (
+          <p className="text-red-500">Error: {error}</p>
+        ) : loading ? (
+          <p>Loading...</p>
+        ) : (
+          <>
+            <div className="flex space-x-4 mb-4">
+              <input
+                className="border p-2 rounded w-full"
+                placeholder="Filter by actor"
+                value={actorFilter}
+                onChange={(e) => setActorFilter(e.target.value)}
+              />
+              <input
+                className="border p-2 rounded w-full"
+                placeholder="Filter by action"
+                value={actionFilter}
+                onChange={(e) => setActionFilter(e.target.value)}
+              />
+            </div>
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr>
+                  <th className="border-b py-2">Timestamp</th>
+                  <th className="border-b py-2">Actor</th>
+                  <th className="border-b py-2">Action</th>
+                  <th className="border-b py-2">Target</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((log) => (
+                  <tr key={log.id}>
+                    <td className="py-2 border-b">{new Date(log.ts).toLocaleString()}</td>
+                    <td className="py-2 border-b">{log.actor}</td>
+                    <td className="py-2 border-b">{log.action}</td>
+                    <td className="py-2 border-b">{log.target}</td>
+                  </tr>
+                ))}
+                {filtered.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="py-4 text-center text-gray-500">
+                      No audit logs found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </>
+        )}
       </div>
-      {error && <p className="text-red-600">Error: {error}</p>}
-      <table className="table-auto w-full border">
-        <thead>
-          <tr className="bg-gray-200">
-            <th className="px-4 py-2 border">ID</th>
-            <th className="px-4 py-2 border">Actor</th>
-            <th className="px-4 py-2 border">Action</th>
-            <th className="px-4 py-2 border">Target</th>
-            <th className="px-4 py-2 border">Timestamp</th>
-          </tr>
-        </thead>
-        <tbody>
-          {logs.map((log) => (
-            <tr key={log.id} className="border-t">
-              <td className="px-4 py-2 border">{log.id}</td>
-              <td className="px-4 py-2 border">{log.actor}</td>
-              <td className="px-4 py-2 border">{log.action}</td>
-              <td className="px-4 py-2 border">{log.target}</td>
-              <td className="px-4 py-2 border">{new Date(log.ts).toLocaleString()}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    </Layout>
   );
 };
 
