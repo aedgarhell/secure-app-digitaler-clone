@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EncryptionService } from '../encryption/encryption.service';
-import { Prisma } from '@prisma/client';
 import { CreateSecretDto } from './dto/create-secret.dto';
 import { UpdateSecretDto } from './dto/update-secret.dto';
 
@@ -17,7 +16,7 @@ export class SecretsService {
   ) {}
 
   /**
-   * Creates a new secret. The provided fields are encrypted before being stored.
+   * Creates a new secret. The provided fields are encrypted before stored.
    */
   async create(data: CreateSecretDto) {
     const enc = this.encryption.encrypt(data.fields);
@@ -32,58 +31,130 @@ export class SecretsService {
   }
 
   /**
-   * Lists all secrets belonging to a given vault.
+   * Returns all secrets for a vault, decrypting each record.
    */
   async findAllByVault(vaultId: number) {
-    return this.prisma.secret.findMany({ where: { vaultId } });
+    const secrets = await this.prisma.secret.findMany({
+      where: { vaultId },
+    });
+
+    return secrets.map((secret) => {
+      const enc = JSON.parse(secret.encBlob);
+      const fields = this.encryption.decrypt(enc);
+      return {
+        id: secret.id,
+        vaultId: secret.vaultId,
+        type: secret.type,
+        tags: secret.tags,
+        fields,
+      };
+    });
   }
 
   /**
-   * Retrieves a secret by its identifier (without decrypting it).
+   * Returns all secrets for all vaults belonging to a tenant. This is useful
+   * when preparing a data handover for a release.
+   */
+  async findAllByTenant(tenantId: number) {
+    // fetch all vaults for the tenant and include their secrets
+    const vaults = await this.prisma.vault.findMany({
+      where: { tenantId },
+      include: { secrets: true },
+    });
+
+    const result: any[] = [];
+    for (const vault of vaults) {
+      for (const secret of vault.secrets) {
+        const enc = JSON.parse(secret.encBlob);
+        const fields = this.encryption.decrypt(enc);
+        result.push({
+          id: secret.id,
+          vaultId: secret.vaultId,
+          type: secret.type,
+          tags: secret.tags,
+          fields,
+        });
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Returns a single secret by ID, decrypting its contents.
    */
   async findOne(id: number) {
-    const secret = await this.prisma.secret.findUnique({ where: { id } });
+    const secret = await this.prisma.secret.findUnique({
+      where: { id },
+    });
+
     if (!secret) {
-      throw new NotFoundException('Secret not found');
+      throw new NotFoundException(`Secret with id ${id} not found`);
     }
-    return secret;
+
+    const enc = JSON.parse(secret.encBlob);
+    const fields = this.encryption.decrypt(enc);
+
+    return {
+      id: secret.id,
+      vaultId: secret.vaultId,
+      type: secret.type,
+      tags: secret.tags,
+      fields,
+    };
   }
 
   /**
-   * Decrypts and returns the secret payload for a given secret.
+   * Decrypts a secret entity's encBlob field and returns the plain fields.
    */
-  async decrypt(id: number) {
-    const secret = await this.findOne(id);
+  async decrypt(secret: { encBlob: string }) {
     const enc = JSON.parse(secret.encBlob);
     return this.encryption.decrypt(enc);
   }
 
   /**
-   * Updates a secret. If fields are provided, they are encrypted and the version
-   * counter is incremented.
+   * Updates a secret. Only provided properties are modified. If fields
+   * are provided, they will be re-encrypted.
    */
-  async update(id: number, dto: UpdateSecretDto) {
-    const data: Prisma.SecretUpdateInput = {};
-    if (dto.type !== undefined) {
-      data.type = dto.type;
+  async update(id: number, data: UpdateSecretDto) {
+    const secret = await this.prisma.secret.findUnique({
+      where: { id },
+    });
+    if (!secret) {
+      throw new NotFoundException(`Secret with id ${id} not found`);
     }
-    if (dto.tags !== undefined) {
-      data.tags = dto.tags;
+
+    // only encrypt fields if provided
+    let encBlob: string | undefined;
+    if (data.fields) {
+      encBlob = JSON.stringify(this.encryption.encrypt(data.fields));
     }
-    if (dto.fields !== undefined) {
-      const enc = this.encryption.encrypt(dto.fields);
-      data.encBlob = JSON.stringify(enc);
-      data.version = {
-        increment: 1,
-      };
-    }
-    return this.prisma.secret.update({ where: { id }, data });
+
+    const updated = await this.prisma.secret.update({
+      where: { id },
+      data: {
+        type: data.type ?? undefined,
+        tags: data.tags ?? undefined,
+        encBlob: encBlob ?? undefined,
+      },
+    });
+
+    const enc = JSON.parse(updated.encBlob);
+    const fields = this.encryption.decrypt(enc);
+
+    return {
+      id: updated.id,
+      vaultId: updated.vaultId,
+      type: updated.type,
+      tags: updated.tags,
+      fields,
+    };
   }
 
   /**
-   * Deletes a secret by its identifier.
+   * Deletes a secret.
    */
   async remove(id: number) {
-    return this.prisma.secret.delete({ where: { id } });
+    await this.prisma.secret.delete({ where: { id } });
+    return { deleted: true };
   }
 }
