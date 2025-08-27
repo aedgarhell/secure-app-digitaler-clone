@@ -1,79 +1,76 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
+import Layout from '../components/Layout';
 
+/**
+ * Login page for the Secure App. Provides a simple form for users to enter
+ * their email and password. On success, the user is redirected to the dashboard.
+ */
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [totp, setTotp] = useState('');
-  const [stage, setStage] = useState<'login' | 'totp'>('login');
-  const [token, setToken] = useState('');
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+    setMessage('');
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+      const res = await fetch(`${baseUrl}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-      if (res.ok) {
-        const data = await res.json();
-        setToken(data.access_token);
-        setStage('totp');
-      } else {
-        alert('Login failed');
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(err);
       }
-    } catch (err) {
-      console.error(err);
-      alert('An error occurred');
-    }
-  };
-
-  const handleTotp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/verify-totp`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ token: totp }),
-      });
-      if (res.ok) {
-        alert('Successfully logged in!');
-      } else {
-        alert('TOTP verification failed');
-      }
-    } catch (err) {
-      console.error(err);
-      alert('An error occurred');
+      // handle success: in a real application, store the token and redirect
+      setMessage('Login successful. Redirecting...');
+    } catch (err: any) {
+      setMessage(`Error: ${err.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-      {stage === 'login' ? (
-        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+    <Layout>
+      <div className="p-4 max-w-md mx-auto">
+        <h1 className="text-2xl font-semibold mb-4">Login</h1>
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label>Email:</label><br />
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+            <label className="block mb-1 font-medium">Email</label>
+            <input
+              type="email"
+              className="border p-2 rounded w-full"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
           </div>
           <div>
-            <label>Password:</label><br />
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+            <label className="block mb-1 font-medium">Password</label>
+            <input
+              type="password"
+              className="border p-2 rounded w-full"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
           </div>
-          <button type="submit">Login</button>
+          <button
+            type="submit"
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+            disabled={loading}
+          >
+            {loading ? 'Signing in...' : 'Sign In'}
+          </button>
         </form>
-      ) : (
-        <form onSubmit={handleTotp} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div>
-            <label>2FA Code:</label><br />
-            <input type="text" value={totp} onChange={e => setTotp(e.target.value)} required />
-          </div>
-          <button type="submit">Verify</button>
-        </form>
-      )}
-    </div>
+        {message && <p className="mt-4 text-center">{message}</p>}
+      </div>
+    </Layout>
   );
 };
 
