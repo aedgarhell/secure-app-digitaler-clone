@@ -9,6 +9,8 @@ Dieses Dokument beschreibt die aktuell implementierten Module und Endpunkte der 
 - **Anmeldung**: `POST /auth/login` – Authentifiziert einen Benutzer über die lokale Strategy und gibt bei Erfolg einen JWT‑Access‑Token zurück.
 - **TOTP einrichten**: `POST /auth/enable‑totp` – Erstellt ein neues TOTP‑Secret für den angemeldeten Benutzer.
 - **TOTP verifizieren**: `POST /auth/verify‑totp` – Verifiziert einen TOTP‑Code und aktiviert TOTP für den Benutzer.
+- * **Passwort-Reset anfordern**: `POST /auth/request-password-reset` – Startet den Prozess zum Zurücksetzen des Passworts und gibt einen Reset-Token aus.
+* **Passwort zurücksetzen**: `POST /auth/reset-password` – Setzt das Passwort zurück, wenn ein gültiger Token und ein neues Passwort übergeben werden.
 
 ## Benutzerverwaltung
 

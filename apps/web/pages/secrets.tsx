@@ -1,46 +1,46 @@
 import React, { useEffect, useState } from 'react';
 import Layout from '../components/Layout';
 
-interface Runbook {
+interface Secret {
   id: number;
-  title: string;
-  content?: string;
+  type: string;
   tags?: string[];
   createdAt?: string;
 }
 
 /**
- * Runbooks page displays a list of runbooks associated with the current tenant.
- * In a full implementation, users could create, edit, and delete runbooks.
+ * Secrets page lists all secrets accessible to the current user. Secrets
+ * are decrypted on the backend before being sent to this page. In a
+ * full implementation, users could view details or edit secrets here.
  */
-const RunbooksPage: React.FC = () => {
-  const [runbooks, setRunbooks] = useState<Runbook[]>([]);
+const SecretsPage: React.FC = () => {
+  const [secrets, setSecrets] = useState<Secret[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const fetchRunbooks = async () => {
+    const fetchSecrets = async () => {
       try {
         const baseUrl = process.env.NEXT_PUBLIC_API_URL;
-        const res = await fetch(`${baseUrl}/runbooks`);
+        const res = await fetch(`${baseUrl}/secrets`);
         if (!res.ok) {
-          throw new Error('Failed to fetch runbooks');
+          throw new Error('Failed to fetch secrets');
         }
-        const data: Runbook[] = await res.json();
-        setRunbooks(data);
+        const data: Secret[] = await res.json();
+        setSecrets(data);
       } catch (err: any) {
         setError(err.message);
       } finally {
         setLoading(false);
       }
     };
-    fetchRunbooks();
+    fetchSecrets();
   }, []);
 
   return (
     <Layout>
       <div className="p-4">
-        <h1 className="text-2xl font-semibold mb-4">Runbooks</h1>
+        <h1 className="text-2xl font-semibold mb-4">Secrets</h1>
         {error ? (
           <p className="text-red-500">Error: {error}</p>
         ) : loading ? (
@@ -50,32 +50,28 @@ const RunbooksPage: React.FC = () => {
             <thead>
               <tr>
                 <th className="border-b py-2">ID</th>
-                <th className="border-b py-2">Title</th>
+                <th className="border-b py-2">Type</th>
                 <th className="border-b py-2">Tags</th>
                 <th className="border-b py-2">Created At</th>
               </tr>
             </thead>
             <tbody>
-              {runbooks.map((runbook) => (
-                <tr key={runbook.id}>
-                  <td className="py-2 border-b">{runbook.id}</td>
-                  <td className="py-2 border-b">{runbook.title}</td>
+              {secrets.map((secret) => (
+                <tr key={secret.id}>
+                  <td className="py-2 border-b">{secret.id}</td>
+                  <td className="py-2 border-b">{secret.type}</td>
                   <td className="py-2 border-b">
-                    {runbook.tags && runbook.tags.length > 0
-                      ? runbook.tags.join(', ')
-                      : '—'}
+                    {secret.tags && secret.tags.length > 0 ? secret.tags.join(', ') : '—'}
                   </td>
                   <td className="py-2 border-b">
-                    {runbook.createdAt
-                      ? new Date(runbook.createdAt).toLocaleDateString()
-                      : '—'}
+                    {secret.createdAt ? new Date(secret.createdAt).toLocaleDateString() : '—'}
                   </td>
                 </tr>
               ))}
-              {runbooks.length === 0 && (
+              {secrets.length === 0 && (
                 <tr>
                   <td colSpan={4} className="py-4 text-center text-gray-500">
-                    No runbooks found.
+                    No secrets found.
                   </td>
                 </tr>
               )}
@@ -87,4 +83,4 @@ const RunbooksPage: React.FC = () => {
   );
 };
 
-export default RunbooksPage;
+export default SecretsPage;
